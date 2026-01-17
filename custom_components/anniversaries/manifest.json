@@ -9,7 +9,8 @@
   "requirements": [
     "python-dateutil>=2.8.1",
     "integrationhelper>=0.2.2",
-    "voluptuous>=0.12.1"
+    "voluptuous>=0.12.1",
+    "hdate>=0.10.0"
   ],
   "version": "1.0.0"
 }

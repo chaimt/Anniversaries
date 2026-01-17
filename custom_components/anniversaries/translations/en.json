@@ -5,7 +5,8 @@
                 "description": "Enter the sensor name and configure sensor parameters. More info on https://github.com/pinkywafer/Anniversaries",
                 "data": {
                     "name": "Friendly name",
-                    "date": "First Date (yyyy-mm-dd) or (mm-dd) if year is unknown",
+                    "calendar_type": "Calendar Type",
+                    "date": "Date (Gregorian: yyyy-mm-dd or mm-dd; Hebrew: dd-mm-yyyy, dd-mm, or 'DD MonthName YYYY')",
                     "count_up": "Count Up (Count down is default)",
                     "one_time": "One Time Event (Non-recurring)",
                     "show_half_anniversary": "Show Half Anniversary Attributes",
@@ -24,7 +25,15 @@
             }
         },
         "error": {
-            "invalid_date": "The date is not valid.  Please enter a valid 'YYYY-MM-DD'  or 'MM-DD' date"
+            "invalid_date": "Invalid Date. For Gregorian: 'YYYY-MM-DD' or 'MM-DD'. For Hebrew: 'DD-MM-YYYY', 'DD-MM', or 'DD MonthName YYYY'"
+        }
+    },
+    "selector": {
+        "calendar_type": {
+            "options": {
+                "gregorian": "Gregorian",
+                "hebrew": "Hebrew"
+            }
         }
     },
     "options": {
@@ -33,7 +42,8 @@
                 "description": "Change sensor parameters. More info on https://github.com/pinkywafer/Anniversaries",
                 "data": {
                     "name": "Friendly name",
-                    "date": "First Date (yyyy-mm-dd) or (mm-yy) if year is unknown",
+                    "calendar_type": "Calendar Type",
+                    "date": "Date (Gregorian: yyyy-mm-dd or mm-dd; Hebrew: dd-mm-yyyy, dd-mm, or 'DD MonthName YYYY')",
                     "count_up": "Count Up (Count down is default)",
                     "one_time": "One Time Event (Non-recurring)",
                     "show_half_anniversary": "Show Half Anniversary Attributes",
@@ -51,7 +61,7 @@
             }
         },
         "error": {
-            "invalid_date": "The date is not valid.  Please enter a valid 'YYYY-MM-DD' or 'MM-DD' date."
+            "invalid_date": "Invalid Date. For Gregorian: 'YYYY-MM-DD' or 'MM-DD'. For Hebrew: 'DD-MM-YYYY', 'DD-MM', or 'DD MonthName YYYY'"
         }
     }
 }

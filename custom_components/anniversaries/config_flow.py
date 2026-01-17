@@ -18,6 +18,7 @@ from .const import (
     DEFAULT_ID_PREFIX,
     DEFAULT_ONE_TIME,
     DEFAULT_COUNT_UP,
+    DEFAULT_CALENDAR_TYPE,
     CONF_ICON_NORMAL,
     CONF_ICON_TODAY,
     CONF_ICON_SOON,
@@ -28,6 +29,9 @@ from .const import (
     CONF_ID_PREFIX,
     CONF_ONE_TIME,
     CONF_COUNT_UP,
+    CONF_CALENDAR_TYPE,
+    CALENDAR_TYPE_GREGORIAN,
+    CALENDAR_TYPE_HEBREW,
 )
 
 from homeassistant.const import CONF_NAME
@@ -46,7 +50,8 @@ class AnniversariesFlowHandler(config_entries.ConfigFlow):
         self._errors = {}
         if user_input is not None:
             self._data.update(user_input)
-            if is_not_date(user_input[CONF_DATE], user_input[CONF_ONE_TIME]):
+            calendar_type = user_input.get(CONF_CALENDAR_TYPE, DEFAULT_CALENDAR_TYPE)
+            if is_not_date(user_input[CONF_DATE], user_input[CONF_ONE_TIME], calendar_type):
                 self._errors["base"] = "invalid_date"
             if self._errors == {}:
                 self.init_info = user_input
@@ -68,6 +73,7 @@ class AnniversariesFlowHandler(config_entries.ConfigFlow):
         half_anniversary = DEFAULT_HALF_ANNIVERSARY
         unit_of_measurement = DEFAULT_UNIT_OF_MEASUREMENT
         id_prefix = DEFAULT_ID_PREFIX
+        calendar_type = DEFAULT_CALENDAR_TYPE
         if user_input is not None:
             if CONF_NAME in user_input:
                 name = user_input[CONF_NAME]
@@ -83,8 +89,11 @@ class AnniversariesFlowHandler(config_entries.ConfigFlow):
                 unit_of_measurement = user_input[CONF_UNIT_OF_MEASUREMENT]
             if CONF_ID_PREFIX in user_input:
                 id_prefix = user_input[CONF_ID_PREFIX]
+            if CONF_CALENDAR_TYPE in user_input:
+                calendar_type = user_input[CONF_CALENDAR_TYPE]
         data_schema = OrderedDict()
         data_schema[vol.Required(CONF_NAME, default=name)] = str
+        data_schema[vol.Required(CONF_CALENDAR_TYPE, default=calendar_type)] = vol.In([CALENDAR_TYPE_GREGORIAN, CALENDAR_TYPE_HEBREW])
         data_schema[vol.Required(CONF_DATE, default=date)] = str
         data_schema[vol.Required(CONF_COUNT_UP, default=count_up)] = bool
         data_schema[vol.Required(CONF_ONE_TIME, default=one_time)] = bool
@@ -132,20 +141,59 @@ class AnniversariesFlowHandler(config_entries.ConfigFlow):
         else:
             return EmptyOptions(config_entry)
 
-def is_not_date(date, one_time):
-    try:
-        datetime.strptime(date, "%Y-%m-%d")
-        return False
-    except ValueError:
-        if not one_time:
+def is_not_date(date, one_time, calendar_type=CALENDAR_TYPE_GREGORIAN):
+    """Validate date based on calendar type."""
+    if calendar_type == CALENDAR_TYPE_HEBREW:
+        # Hebrew date validation
+        try:
+            import hdate
+        except ImportError:
+            return True  # Can't validate Hebrew dates without hdate library
+        
+        try:
+            # Try format: DD-MM-YYYY or DD-MM
+            parts = date.split("-")
+            if len(parts) == 3:
+                day = int(parts[0])
+                month = int(parts[1])
+                year = int(parts[2])
+                hdate.HDate(day, month, year)
+                return False
+            elif len(parts) == 2:
+                day = int(parts[0])
+                month = int(parts[1])
+                if 1 <= month <= 13 and 1 <= day <= 30:
+                    return False
+        except (ValueError, AttributeError):
             pass
-        else:
+        
+        # Try format with month names
+        try:
+            parts = date.split()
+            if len(parts) >= 2:
+                day = int(parts[0])
+                if len(parts) == 3:
+                    year = int(parts[2])
+                return False  # If we got here, basic parsing worked
+        except ValueError:
+            pass
+        
+        return True  # Invalid Hebrew date
+    else:
+        # Gregorian validation (original logic)
+        try:
+            datetime.strptime(date, "%Y-%m-%d")
+            return False
+        except ValueError:
+            if not one_time:
+                pass
+            else:
+                return True
+        try:
+            datetime.strptime(date, "%m-%d")
+            return False
+        except ValueError:
             return True
-    try:
-        datetime.strptime(date, "%m-%d")
-        return False
-    except ValueError:
-        return True
 
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
@@ -158,7 +206,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         self._errors = {}
         if user_input is not None:
             self._data.update(user_input)
-            if is_not_date(user_input[CONF_DATE], user_input[CONF_ONE_TIME]):
+            calendar_type = user_input.get(CONF_CALENDAR_TYPE, DEFAULT_CALENDAR_TYPE)
+            if is_not_date(user_input[CONF_DATE], user_input[CONF_ONE_TIME], calendar_type):
                 self._errors["base"] = "invalid_date"
             if self._errors == {}:
                 return await self.async_step_icons()
@@ -177,6 +226,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         one_time = self.config_entry.options.get(CONF_ONE_TIME)
         unit_of_measurement = self.config_entry.options.get(CONF_UNIT_OF_MEASUREMENT)
         half_anniversary = self.config_entry.options.get(CONF_HALF_ANNIVERSARY)
+        calendar_type = self.config_entry.options.get(CONF_CALENDAR_TYPE)
         if count_up is None:
             count_up = DEFAULT_COUNT_UP
         if one_time is None:
@@ -185,7 +235,10 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             half_anniversary = DEFAULT_HALF_ANNIVERSARY
         if unit_of_measurement is None:
             unit_of_measurement = DEFAULT_UNIT_OF_MEASUREMENT
+        if calendar_type is None:
+            calendar_type = DEFAULT_CALENDAR_TYPE
         data_schema[vol.Required(CONF_NAME,default=self.config_entry.options.get(CONF_NAME),)] = str
+        data_schema[vol.Required(CONF_CALENDAR_TYPE, default=calendar_type,)] = vol.In([CALENDAR_TYPE_GREGORIAN, CALENDAR_TYPE_HEBREW])
         data_schema[vol.Required(CONF_DATE, default=self.config_entry.options.get(CONF_DATE),)] = str
         data_schema[vol.Required(CONF_COUNT_UP, default=count_up,)] = bool
         data_schema[vol.Required(CONF_ONE_TIME, default=one_time,)] = bool

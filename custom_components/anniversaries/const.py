@@ -41,8 +41,13 @@ CONF_UNIT_OF_MEASUREMENT = "unit_of_measurement"
 CONF_ID_PREFIX = "id_prefix"
 CONF_ONE_TIME = "one_time"
 CONF_COUNT_UP = "count_up"
+CONF_CALENDAR_TYPE = "calendar_type"
 CONF_DATE_EXCLUSION_ERROR = "Configuration cannot include both `date` and `date_template`. configure ONLY ONE"
 CONF_DATE_REQD_ERROR = "Either `date` or `date_template` is Required"
+
+# Calendar Types
+CALENDAR_TYPE_GREGORIAN = "gregorian"
+CALENDAR_TYPE_HEBREW = "hebrew"
 
 # Defaults
 DEFAULT_NAME = DOMAIN
@@ -56,6 +61,7 @@ DEFAULT_UNIT_OF_MEASUREMENT = "Days"
 DEFAULT_ID_PREFIX = "anniversary_"
 DEFAULT_ONE_TIME = False
 DEFAULT_COUNT_UP = False
+DEFAULT_CALENDAR_TYPE = CALENDAR_TYPE_GREGORIAN
 
 ICON = DEFAULT_ICON_NORMAL
 
@@ -71,6 +77,78 @@ def check_date(value):
     except ValueError:
         raise vol.Invalid(f"Invalid date: {value}")
 
+def validate_hebrew_date(value):
+    """Validate Hebrew date format and return it if valid."""
+    try:
+        import hdate
+    except ImportError:
+        raise vol.Invalid("hdate library not available for Hebrew calendar support")
+    
+    # Try format: DD-MM-YYYY (Hebrew date)
+    try:
+        parts = value.split("-")
+        if len(parts) == 3:
+            day = int(parts[0])
+            month = int(parts[1])
+            year = int(parts[2])
+            # Validate by creating HDate object
+            hdate.HDate(day, month, year)
+            return value
+    except (ValueError, AttributeError):
+        pass
+    
+    # Try format: DD-MM (Hebrew date without year)
+    try:
+        parts = value.split("-")
+        if len(parts) == 2:
+            day = int(parts[0])
+            month = int(parts[1])
+            # Validate month is in valid range (1-13 for leap years)
+            if 1 <= month <= 13 and 1 <= day <= 30:
+                return value
+    except (ValueError, AttributeError):
+        pass
+    
+    # Try format: "DD MonthName YYYY" or "DD MonthName" (e.g., "15 Adar 5745")
+    try:
+        parts = value.split()
+        if len(parts) >= 2:
+            day = int(parts[0])
+            month_name = parts[1]
+            year = int(parts[2]) if len(parts) == 3 else None
+            
+            # Map month names to numbers (supporting both Hebrew and English transliterations)
+            month_map = {
+                "Tishrei": 1, "תשרי": 1,
+                "Cheshvan": 2, "Marcheshvan": 2, "חשוון": 2, "מרחשוון": 2,
+                "Kislev": 3, "כסלו": 3,
+                "Tevet": 4, "טבת": 4,
+                "Shevat": 5, "שבט": 5,
+                "Adar": 6, "אדר": 6,
+                "Adar1": 13, "Adar I": 13, "אדר א": 13,
+                "Adar2": 14, "Adar II": 14, "אדר ב": 14,
+                "Nisan": 7, "ניסן": 7,
+                "Iyar": 8, "אייר": 8,
+                "Sivan": 9, "סיוון": 9,
+                "Tammuz": 10, "תמוז": 10,
+                "Av": 11, "אב": 11,
+                "Elul": 12, "אלול": 12,
+            }
+            
+            month_num = month_map.get(month_name)
+            if month_num and year:
+                # Validate by creating HDate object
+                hdate.HDate(day, month_num, year)
+                return value
+            elif month_num and not year:
+                # Valid month and day without year
+                if 1 <= day <= 30:
+                    return value
+    except (ValueError, KeyError, AttributeError):
+        pass
+    
+    raise vol.Invalid(f"Invalid Hebrew date: {value}. Use format DD-MM-YYYY, DD-MM, or 'DD MonthName YYYY'")
+
 DATE_SCHEMA = vol.Schema(
     {
         vol.Required(
@@ -85,8 +163,9 @@ SENSOR_CONFIG_SCHEMA = vol.All(
     vol.Schema(
         {
             vol.Required(CONF_NAME): cv.string,
-            vol.Exclusive(CONF_DATE, CONF_DATE, msg=CONF_DATE_EXCLUSION_ERROR): check_date,
+            vol.Exclusive(CONF_DATE, CONF_DATE, msg=CONF_DATE_EXCLUSION_ERROR): cv.string,
             vol.Exclusive(CONF_DATE_TEMPLATE, CONF_DATE, msg=CONF_DATE_EXCLUSION_ERROR): cv.string,
+            vol.Optional(CONF_CALENDAR_TYPE, default=DEFAULT_CALENDAR_TYPE): vol.In([CALENDAR_TYPE_GREGORIAN, CALENDAR_TYPE_HEBREW]),
             vol.Optional(CONF_SOON, default=DEFAULT_SOON): cv.positive_int,
             vol.Optional(CONF_ICON_NORMAL, default=DEFAULT_ICON_NORMAL): cv.icon,
             vol.Optional(CONF_ICON_TODAY, default=DEFAULT_ICON_TODAY): cv.icon,
