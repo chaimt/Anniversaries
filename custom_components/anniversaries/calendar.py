@@ -104,6 +104,7 @@ class EntitiesCalendarData:
             if (
                 entity
                 and entity.name
+                and entity._date != "Invalid Date"
                 and entity._next_date.date()
                 and start_date <= entity._next_date.date() <= end_date
             ):
@@ -141,7 +142,7 @@ class EntitiesCalendarData:
         for ent in self.entities:
             _LOGGER.debug("Update Entity Name: " + str(ent))
             entity = self._hass.data[DOMAIN][SENSOR_PLATFORM][ent]
-            if entity and entity.name and entity._date:
+            if entity and entity.name and entity._date and entity._date != "Invalid Date":
                 # Build description with Hebrew date info if applicable
                 description = ""
                 if "description" in entity.extra_state_attributes:

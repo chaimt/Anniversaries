@@ -186,9 +186,10 @@ class anniversaries(Entity):
                 self._hebrew_date = date_str
                 self._parse_hebrew_date(date_str)
             
-            self._date = self._date.replace(tzinfo=dt_util.DEFAULT_TIME_ZONE)
-            if self._show_half_anniversary:
-                self._half_date = self._date + relativedelta(months=+6)
+            if self._date != "Invalid Date":
+                self._date = self._date.replace(tzinfo=dt_util.DEFAULT_TIME_ZONE)
+                if self._show_half_anniversary:
+                    self._half_date = self._date + relativedelta(months=+6)
         self._icon_normal = config.get(CONF_ICON_NORMAL)
         self._icon_today = config.get(CONF_ICON_TODAY)
         self._icon_soon = config.get(CONF_ICON_SOON)
@@ -415,13 +416,18 @@ class anniversaries(Entity):
             try:
                 template_date = templater.Template(self._date_template, self.hass).async_render()
                 self._date, self._unknown_year = validate_date(template_date, self._calendar_type)
+                if self._date == "Invalid Date":
+                    self._state = self._date
+                    return
                 self._date = self._date.replace(tzinfo=dt_util.DEFAULT_TIME_ZONE)
             except:
                 self._state = "Invalid Template"
                 return
-            if self._date == "Invalid Date":
-                self._state = self._date
-                return
+        
+        # Check if date is invalid for non-template sensors
+        if self._date == "Invalid Date":
+            self._state = self._date
+            return
 
         today = date.today()
         

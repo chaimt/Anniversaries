@@ -150,32 +150,70 @@ def is_not_date(date, one_time, calendar_type=CALENDAR_TYPE_GREGORIAN):
         except ImportError:
             return True  # Can't validate Hebrew dates without hdate library
         
+        if not date or not isinstance(date, str):
+            return True
+        
         try:
-            # Try format: DD-MM-YYYY or DD-MM
+            # Try format: DD-MM-YYYY
             parts = date.split("-")
             if len(parts) == 3:
                 day = int(parts[0])
                 month = int(parts[1])
                 year = int(parts[2])
+                # Validate using hdate
                 hdate.HDate(day, month, year)
                 return False
+            # Try format: DD-MM (no year for recurring dates)
             elif len(parts) == 2:
                 day = int(parts[0])
                 month = int(parts[1])
+                # Basic validation: Hebrew months 1-13, days 1-30
                 if 1 <= month <= 13 and 1 <= day <= 30:
-                    return False
-        except (ValueError, AttributeError):
+                    # For more thorough validation, try creating a date with a sample year
+                    # Use a leap year to allow all month values
+                    try:
+                        hdate.HDate(day, month, 5784)  # 5784 is a leap year
+                        return False
+                    except (ValueError, AttributeError):
+                        return True
+                return True
+        except (ValueError, AttributeError, TypeError):
             pass
         
-        # Try format with month names
+        # Try format with month names (e.g., "5 Tishrei" or "5 Tishrei 5784")
         try:
             parts = date.split()
             if len(parts) >= 2:
                 day = int(parts[0])
-                if len(parts) == 3:
-                    year = int(parts[2])
-                return False  # If we got here, basic parsing worked
-        except ValueError:
+                month_name = parts[1]
+                
+                # Map Hebrew month names to numbers
+                month_map = {
+                    'tishrei': 1, 'cheshvan': 2, 'marcheshvan': 2, 'kislev': 3, 'tevet': 4,
+                    'shevat': 5, 'shvat': 5, 'adar': 6,
+                    'adar1': 13, 'adar_i': 13, 'adar i': 13,
+                    'adar2': 14, 'adar_ii': 14, 'adar ii': 14,
+                    'nisan': 7, 'iyar': 8, 'sivan': 9, 'tammuz': 10,
+                    'av': 11, 'elul': 12
+                }
+                
+                month_name_lower = month_name.lower()
+                if month_name_lower in month_map:
+                    month = month_map[month_name_lower]
+                    
+                    if len(parts) == 3:
+                        # With year
+                        year = int(parts[2])
+                        hdate.HDate(day, month, year)
+                        return False
+                    else:
+                        # Without year - validate with sample leap year
+                        try:
+                            hdate.HDate(day, month, 5784)
+                            return False
+                        except (ValueError, AttributeError):
+                            return True
+        except (ValueError, AttributeError, TypeError, IndexError):
             pass
         
         return True  # Invalid Hebrew date
@@ -198,7 +236,8 @@ def is_not_date(date, one_time, calendar_type=CALENDAR_TYPE_GREGORIAN):
 
 class OptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config_entry):
-        self.config_entry = config_entry
+        super().__init__()
+        self._config_entry = config_entry
         self._data = {}
         self._data["unique_id"] = config_entry.options.get("unique_id")
 
@@ -222,11 +261,11 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
     async def _show_init_form(self, user_input):
         data_schema = OrderedDict()
-        count_up = self.config_entry.options.get(CONF_COUNT_UP)
-        one_time = self.config_entry.options.get(CONF_ONE_TIME)
-        unit_of_measurement = self.config_entry.options.get(CONF_UNIT_OF_MEASUREMENT)
-        half_anniversary = self.config_entry.options.get(CONF_HALF_ANNIVERSARY)
-        calendar_type = self.config_entry.options.get(CONF_CALENDAR_TYPE)
+        count_up = self._config_entry.options.get(CONF_COUNT_UP)
+        one_time = self._config_entry.options.get(CONF_ONE_TIME)
+        unit_of_measurement = self._config_entry.options.get(CONF_UNIT_OF_MEASUREMENT)
+        half_anniversary = self._config_entry.options.get(CONF_HALF_ANNIVERSARY)
+        calendar_type = self._config_entry.options.get(CONF_CALENDAR_TYPE)
         if count_up is None:
             count_up = DEFAULT_COUNT_UP
         if one_time is None:
@@ -237,9 +276,9 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             unit_of_measurement = DEFAULT_UNIT_OF_MEASUREMENT
         if calendar_type is None:
             calendar_type = DEFAULT_CALENDAR_TYPE
-        data_schema[vol.Required(CONF_NAME,default=self.config_entry.options.get(CONF_NAME),)] = str
+        data_schema[vol.Required(CONF_NAME,default=self._config_entry.options.get(CONF_NAME),)] = str
         data_schema[vol.Required(CONF_CALENDAR_TYPE, default=calendar_type,)] = vol.In([CALENDAR_TYPE_GREGORIAN, CALENDAR_TYPE_HEBREW])
-        data_schema[vol.Required(CONF_DATE, default=self.config_entry.options.get(CONF_DATE),)] = str
+        data_schema[vol.Required(CONF_DATE, default=self._config_entry.options.get(CONF_DATE),)] = str
         data_schema[vol.Required(CONF_COUNT_UP, default=count_up,)] = bool
         data_schema[vol.Required(CONF_ONE_TIME, default=one_time,)] = bool
         data_schema[vol.Required(CONF_HALF_ANNIVERSARY,default=half_anniversary,)] = bool
@@ -250,13 +289,13 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
     async def _show_icon_form(self, user_input):
         data_schema = OrderedDict()
-        data_schema[vol.Required(CONF_ICON_NORMAL,default=self.config_entry.options.get(CONF_ICON_NORMAL),)] = str
-        data_schema[vol.Required(CONF_ICON_TODAY,default=self.config_entry.options.get(CONF_ICON_TODAY),)] = str
-        data_schema[vol.Required(CONF_SOON,default=self.config_entry.options.get(CONF_SOON),)] = int
-        data_schema[vol.Required(CONF_ICON_SOON,default=self.config_entry.options.get(CONF_ICON_SOON),)] = str
+        data_schema[vol.Required(CONF_ICON_NORMAL,default=self._config_entry.options.get(CONF_ICON_NORMAL),)] = str
+        data_schema[vol.Required(CONF_ICON_TODAY,default=self._config_entry.options.get(CONF_ICON_TODAY),)] = str
+        data_schema[vol.Required(CONF_SOON,default=self._config_entry.options.get(CONF_SOON),)] = int
+        data_schema[vol.Required(CONF_ICON_SOON,default=self._config_entry.options.get(CONF_ICON_SOON),)] = str
         return self.async_show_form(step_id="icons", data_schema=vol.Schema(data_schema), errors=self._errors)
 
 
 class EmptyOptions(config_entries.OptionsFlow):
     def __init__(self, config_entry):
-        self.config_entry = config_entry
+        super().__init__()
