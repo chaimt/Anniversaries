@@ -41,8 +41,13 @@ CONF_UNIT_OF_MEASUREMENT = "unit_of_measurement"
 CONF_ID_PREFIX = "id_prefix"
 CONF_ONE_TIME = "one_time"
 CONF_COUNT_UP = "count_up"
+CONF_CALENDAR_TYPE = "calendar_type"
 CONF_DATE_EXCLUSION_ERROR = "Configuration cannot include both `date` and `date_template`. configure ONLY ONE"
 CONF_DATE_REQD_ERROR = "Either `date` or `date_template` is Required"
+
+# Calendar Types
+CALENDAR_TYPE_GREGORIAN = "gregorian"
+CALENDAR_TYPE_HEBREW = "hebrew"
 
 # Defaults
 DEFAULT_NAME = DOMAIN
@@ -56,6 +61,7 @@ DEFAULT_UNIT_OF_MEASUREMENT = "Days"
 DEFAULT_ID_PREFIX = "anniversary_"
 DEFAULT_ONE_TIME = False
 DEFAULT_COUNT_UP = False
+DEFAULT_CALENDAR_TYPE = CALENDAR_TYPE_GREGORIAN
 
 ICON = DEFAULT_ICON_NORMAL
 
@@ -71,6 +77,81 @@ def check_date(value):
     except ValueError:
         raise vol.Invalid(f"Invalid date: {value}")
 
+def validate_hebrew_date(value):
+    """Validate Hebrew date format and return it if valid."""
+    try:
+        from hdate import HebrewDate
+    except ImportError:
+        raise vol.Invalid("hdate library not available for Hebrew calendar support")
+    
+    # Try format: DD-MM-YYYY (Hebrew date)
+    try:
+        parts = value.split("-")
+        if len(parts) == 3:
+            day = int(parts[0])
+            month = int(parts[1])
+            year = int(parts[2])
+            # Validate by creating HebrewDate object
+            HebrewDate(year=year, month=month, day=day)
+            return value
+    except (ValueError, AttributeError):
+        pass
+    
+    # Try format: DD-MM (Hebrew date without year)
+    try:
+        parts = value.split("-")
+        if len(parts) == 2:
+            day = int(parts[0])
+            month = int(parts[1])
+            # Validate month is in valid range (1-14 for hdate library)
+            if 1 <= month <= 14 and 1 <= day <= 30:
+                return value
+    except (ValueError, AttributeError):
+        pass
+    
+    # Try format: "DD MonthName YYYY" or "DD MonthName" (e.g., "15 Adar 5745")
+    try:
+        parts = value.split()
+        if len(parts) >= 2:
+            day = int(parts[0])
+            month_name = parts[1]
+            year = int(parts[2]) if len(parts) == 3 else None
+            
+            # Map month names to numbers (case-insensitive, supporting both Hebrew and English transliterations)
+            # Using hdate library month numbering: Tishrei=1, ..., Adar=6, Adar_I=7, Adar_II=8, Nisan=9, ..., Elul=14
+            month_map = {
+                "tishrei": 1, "תשרי": 1,
+                "cheshvan": 2, "marcheshvan": 2, "חשוון": 2, "מרחשוון": 2,
+                "kislev": 3, "כסלו": 3,
+                "tevet": 4, "טבת": 4,
+                "shevat": 5, "shvat": 5, "שבט": 5,
+                "adar": 6, "אדר": 6,
+                "adar1": 7, "adar_i": 7, "adar i": 7, "אדר א": 7,
+                "adar2": 8, "adar_ii": 8, "adar ii": 8, "אדר ב": 8,
+                "nisan": 9, "ניסן": 9,
+                "iyar": 10, "אייר": 10,
+                "sivan": 11, "סיוון": 11,
+                "tammuz": 12, "תמוז": 12,
+                "av": 13, "אב": 13,
+                "elul": 14, "אלול": 14,
+            }
+            
+            # Convert month name to lowercase for case-insensitive matching
+            month_name_lower = month_name.lower()
+            month_num = month_map.get(month_name_lower)
+            if month_num and year:
+                # Validate by creating HebrewDate object
+                HebrewDate(year=year, month=month_num, day=day)
+                return value
+            elif month_num and not year:
+                # Valid month and day without year
+                if 1 <= day <= 30:
+                    return value
+    except (ValueError, KeyError, AttributeError):
+        pass
+    
+    raise vol.Invalid(f"Invalid Hebrew date: {value}. Use format DD-MM-YYYY, DD-MM, or 'DD MonthName YYYY'")
+
 DATE_SCHEMA = vol.Schema(
     {
         vol.Required(
@@ -85,8 +166,9 @@ SENSOR_CONFIG_SCHEMA = vol.All(
     vol.Schema(
         {
             vol.Required(CONF_NAME): cv.string,
-            vol.Exclusive(CONF_DATE, CONF_DATE, msg=CONF_DATE_EXCLUSION_ERROR): check_date,
+            vol.Exclusive(CONF_DATE, CONF_DATE, msg=CONF_DATE_EXCLUSION_ERROR): cv.string,
             vol.Exclusive(CONF_DATE_TEMPLATE, CONF_DATE, msg=CONF_DATE_EXCLUSION_ERROR): cv.string,
+            vol.Optional(CONF_CALENDAR_TYPE, default=DEFAULT_CALENDAR_TYPE): vol.In([CALENDAR_TYPE_GREGORIAN, CALENDAR_TYPE_HEBREW]),
             vol.Optional(CONF_SOON, default=DEFAULT_SOON): cv.positive_int,
             vol.Optional(CONF_ICON_NORMAL, default=DEFAULT_ICON_NORMAL): cv.icon,
             vol.Optional(CONF_ICON_TODAY, default=DEFAULT_ICON_TODAY): cv.icon,
