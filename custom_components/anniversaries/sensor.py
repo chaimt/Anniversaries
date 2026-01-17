@@ -17,7 +17,7 @@ from homeassistant.const import (
 )
 
 try:
-    import hdate
+    from hdate import HebrewDate, Months
     HDATE_AVAILABLE = True
 except ImportError:
     HDATE_AVAILABLE = False
@@ -85,7 +85,10 @@ def validate_date(value, calendar_type=CALENDAR_TYPE_GREGORIAN):
 def validate_hebrew_date_sensor(value):
     """Validate and parse Hebrew date."""
     if not HDATE_AVAILABLE:
+        _LOGGER.warning(f"hdate library not available for Hebrew date validation: {value}")
         return "Invalid Date", False
+    
+    _LOGGER.debug(f"Validating Hebrew date: {value}")
     
     try:
         # Try format: DD-MM-YYYY (Hebrew date)
@@ -94,10 +97,11 @@ def validate_hebrew_date_sensor(value):
             day = int(parts[0])
             month = int(parts[1])
             year = int(parts[2])
-            hebrew_date = hdate.HDate(day, month, year)
+            hebrew_date = HebrewDate(year=year, month=month, day=day)
             # Convert to Gregorian datetime
-            greg_date = hebrew_date.gdate
+            greg_date = hebrew_date.to_gdate()
             greg_datetime = datetime(greg_date.year, greg_date.month, greg_date.day)
+            _LOGGER.debug(f"Successfully parsed Hebrew date (DD-MM-YYYY): {value} -> {greg_datetime}")
             return greg_datetime, False  # False = year is known
         
         # Try format: DD-MM (Hebrew date without year)
@@ -105,11 +109,13 @@ def validate_hebrew_date_sensor(value):
             day = int(parts[0])
             month = int(parts[1])
             # Use a reference year to validate
-            hebrew_date = hdate.HDate(day, month, 5784)  # Use year 5784 as reference
-            greg_date = hebrew_date.gdate
+            hebrew_date = HebrewDate(year=5784, month=month, day=day)
+            greg_date = hebrew_date.to_gdate()
             greg_datetime = datetime(greg_date.year, greg_date.month, greg_date.day)
+            _LOGGER.debug(f"Successfully parsed Hebrew date (DD-MM): {value} -> {greg_datetime}")
             return greg_datetime, True  # True = year is unknown
-    except (ValueError, AttributeError):
+    except (ValueError, AttributeError) as e:
+        _LOGGER.debug(f"Failed to parse Hebrew date with dash format: {e}")
         pass
     
     # Try format: "DD MonthName YYYY" or "DD MonthName"
@@ -120,40 +126,51 @@ def validate_hebrew_date_sensor(value):
             month_name = parts[1]
             year = int(parts[2]) if len(parts) == 3 else None
             
-            # Map month names to numbers
+            # Map month names to numbers (case-insensitive)
+            # Using hdate library month numbering: Tishrei=1, ..., Adar=6, Adar_I=7, Adar_II=8, Nisan=9, ..., Elul=14
             month_map = {
-                "Tishrei": 1, "תשרי": 1,
-                "Cheshvan": 2, "Marcheshvan": 2, "חשוון": 2, "מרחשוון": 2,
-                "Kislev": 3, "כסלו": 3,
-                "Tevet": 4, "טבת": 4,
-                "Shevat": 5, "שבט": 5,
-                "Adar": 6, "אדר": 6,
-                "Adar1": 13, "Adar I": 13, "אדר א": 13,
-                "Adar2": 14, "Adar II": 14, "אדר ב": 14,
-                "Nisan": 7, "ניסן": 7,
-                "Iyar": 8, "אייר": 8,
-                "Sivan": 9, "סיוון": 9,
-                "Tammuz": 10, "תמוז": 10,
-                "Av": 11, "אב": 11,
-                "Elul": 12, "אלול": 12,
+                "tishrei": 1, "תשרי": 1,
+                "cheshvan": 2, "marcheshvan": 2, "חשוון": 2, "מרחשוון": 2,
+                "kislev": 3, "כסלו": 3,
+                "tevet": 4, "טבת": 4,
+                "shevat": 5, "shvat": 5, "שבט": 5,
+                "adar": 6, "אדר": 6,
+                "adar1": 7, "adar_i": 7, "adar i": 7, "אדר א": 7,
+                "adar2": 8, "adar_ii": 8, "adar ii": 8, "אדר ב": 8,
+                "nisan": 9, "ניסן": 9,
+                "iyar": 10, "אייר": 10,
+                "sivan": 11, "סיוון": 11,
+                "tammuz": 12, "תמוז": 12,
+                "av": 13, "אב": 13,
+                "elul": 14, "אלול": 14,
             }
             
-            month_num = month_map.get(month_name)
+            # Convert month name to lowercase for case-insensitive matching
+            month_name_lower = month_name.lower()
+            month_num = month_map.get(month_name_lower)
+            _LOGGER.debug(f"Parsed month name '{month_name}' -> '{month_name_lower}' -> {month_num}")
             if month_num:
                 if year:
-                    hebrew_date = hdate.HDate(day, month_num, year)
-                    greg_date = hebrew_date.gdate
+                    _LOGGER.debug(f"Creating HebrewDate with day={day}, month={month_num}, year={year}")
+                    hebrew_date = HebrewDate(year=year, month=month_num, day=day)
+                    greg_date = hebrew_date.to_gdate()
                     greg_datetime = datetime(greg_date.year, greg_date.month, greg_date.day)
+                    _LOGGER.debug(f"Successfully parsed Hebrew date (DD MonthName YYYY): {value} -> {greg_datetime}")
                     return greg_datetime, False
                 else:
                     # Use reference year
-                    hebrew_date = hdate.HDate(day, month_num, 5784)
-                    greg_date = hebrew_date.gdate
+                    hebrew_date = HebrewDate(year=5784, month=month_num, day=day)
+                    greg_date = hebrew_date.to_gdate()
                     greg_datetime = datetime(greg_date.year, greg_date.month, greg_date.day)
+                    _LOGGER.debug(f"Successfully parsed Hebrew date (DD MonthName): {value} -> {greg_datetime}")
                     return greg_datetime, True
-    except (ValueError, KeyError, AttributeError):
+            else:
+                _LOGGER.warning(f"Month name not found in map: '{month_name}' (lowercase: '{month_name_lower}')")
+    except (ValueError, KeyError, AttributeError) as e:
+        _LOGGER.error(f"Error parsing Hebrew date '{value}': {e}", exc_info=True)
         pass
     
+    _LOGGER.warning(f"Could not validate Hebrew date: {value}")
     return "Invalid Date", False
 
 class anniversaries(Entity):
@@ -227,25 +244,28 @@ class anniversaries(Entity):
                 month_name = parts[1]
                 year = int(parts[2]) if len(parts) == 3 else None
                 
-                # Map month names to numbers
+                # Map month names to numbers (case-insensitive)
+                # Using hdate library month numbering: Tishrei=1, ..., Adar=6, Adar_I=7, Adar_II=8, Nisan=9, ..., Elul=14
                 month_map = {
-                    "Tishrei": 1, "תשרי": 1,
-                    "Cheshvan": 2, "Marcheshvan": 2, "חשוון": 2, "מרחשוון": 2,
-                    "Kislev": 3, "כסלו": 3,
-                    "Tevet": 4, "טבת": 4,
-                    "Shevat": 5, "שבט": 5,
-                    "Adar": 6, "אדר": 6,
-                    "Adar1": 13, "Adar I": 13, "אדר א": 13,
-                    "Adar2": 14, "Adar II": 14, "אדר ב": 14,
-                    "Nisan": 7, "ניסן": 7,
-                    "Iyar": 8, "אייר": 8,
-                    "Sivan": 9, "סיוון": 9,
-                    "Tammuz": 10, "תמוז": 10,
-                    "Av": 11, "אב": 11,
-                    "Elul": 12, "אלול": 12,
+                    "tishrei": 1, "תשרי": 1,
+                    "cheshvan": 2, "marcheshvan": 2, "חשוון": 2, "מרחשוון": 2,
+                    "kislev": 3, "כסלו": 3,
+                    "tevet": 4, "טבת": 4,
+                    "shevat": 5, "shvat": 5, "שבט": 5,
+                    "adar": 6, "אדר": 6,
+                    "adar1": 7, "adar_i": 7, "adar i": 7, "אדר א": 7,
+                    "adar2": 8, "adar_ii": 8, "adar ii": 8, "אדר ב": 8,
+                    "nisan": 9, "ניסן": 9,
+                    "iyar": 10, "אייר": 10,
+                    "sivan": 11, "סיוון": 11,
+                    "tammuz": 12, "תמוז": 12,
+                    "av": 13, "אב": 13,
+                    "elul": 14, "אלול": 14,
                 }
                 
-                month_num = month_map.get(month_name)
+                # Convert month name to lowercase for case-insensitive matching
+                month_name_lower = month_name.lower()
+                month_num = month_map.get(month_name_lower)
                 if month_num:
                     self._hebrew_date_obj = {"day": day, "month": month_num, "year": year}
         except (ValueError, KeyError):
@@ -258,8 +278,8 @@ class anniversaries(Entity):
         
         try:
             # Get today's Hebrew date
-            today_hdate = hdate.HDate(gdate=today)
-            current_hyear = today_hdate.hdate.year
+            today_hdate = HebrewDate.from_gdate(today)
+            current_hyear = today_hdate.year
             
             day = self._hebrew_date_obj["day"]
             month = self._hebrew_date_obj["month"]
@@ -274,8 +294,8 @@ class anniversaries(Entity):
                 max_day = self._get_max_day_in_month(target_month, current_hyear)
                 actual_day = min(day, max_day)
                 
-                next_hdate = hdate.HDate(actual_day, target_month, current_hyear)
-                next_gdate = next_hdate.gdate
+                next_hdate = HebrewDate(year=current_hyear, month=target_month, day=actual_day)
+                next_gdate = next_hdate.to_gdate()
                 
                 # If the date has passed this year, use next Hebrew year
                 if next_gdate <= today:
@@ -283,8 +303,8 @@ class anniversaries(Entity):
                     target_month = self._handle_adar_month(month, next_hyear)
                     max_day = self._get_max_day_in_month(target_month, next_hyear)
                     actual_day = min(day, max_day)
-                    next_hdate = hdate.HDate(actual_day, target_month, next_hyear)
-                    next_gdate = next_hdate.gdate
+                    next_hdate = HebrewDate(year=next_hyear, month=target_month, day=actual_day)
+                    next_gdate = next_hdate.to_gdate()
                 
                 return next_gdate, next_hdate
             except (ValueError, AttributeError):
@@ -293,8 +313,8 @@ class anniversaries(Entity):
                 target_month = self._handle_adar_month(month, next_hyear)
                 max_day = self._get_max_day_in_month(target_month, next_hyear)
                 actual_day = min(day, max_day)
-                next_hdate = hdate.HDate(actual_day, target_month, next_hyear)
-                next_gdate = next_hdate.gdate
+                next_hdate = HebrewDate(year=next_hyear, month=target_month, day=actual_day)
+                next_gdate = next_hdate.to_gdate()
                 return next_gdate, next_hdate
         except Exception as e:
             _LOGGER.error(f"Error calculating Hebrew anniversary: {e}")
@@ -305,16 +325,17 @@ class anniversaries(Entity):
         if not HDATE_AVAILABLE:
             return month
         
-        # Check if it's a leap year
-        is_leap = hdate.HDate(1, 7, year).hebrew_year_length() > 355
+        # Check if it's a leap year using HebrewDate
+        hd = HebrewDate(year=year, month=1, day=1)
+        is_leap = hd.is_leap_year()
         
-        # Month 6 is Adar in non-leap years, but in leap years we have Adar I (13) and Adar II (14)
+        # Month 6 is Adar in non-leap years, but in leap years we have Adar I (7) and Adar II (8)
         # For birthdays/anniversaries in Adar, halachic custom is to celebrate in Adar II in leap years
         if month == 6 and is_leap:
-            return 14  # Adar II
-        elif month == 13 and not is_leap:
+            return 8  # Adar II
+        elif month == 7 and not is_leap:
             return 6  # Adar I becomes regular Adar in non-leap years
-        elif month == 14 and not is_leap:
+        elif month == 8 and not is_leap:
             return 6  # Adar II becomes regular Adar in non-leap years
         
         return month
@@ -325,9 +346,9 @@ class anniversaries(Entity):
             return 30
         
         try:
-            # Try day 30 first
-            hdate.HDate(30, month, year)
-            return 30
+            # Use HebrewDate's days_in_month method with Months enum
+            hd = HebrewDate(year=year, month=month, day=1)
+            return hd.days_in_month(Months(month))
         except (ValueError, AttributeError):
             return 29
     
@@ -338,20 +359,18 @@ class anniversaries(Entity):
         
         try:
             # Get Hebrew month name
-            month_names = [
-                "Tishrei", "Cheshvan", "Kislev", "Tevet", "Shevat", "Adar",
-                "Nisan", "Iyar", "Sivan", "Tammuz", "Av", "Elul",
-                "Adar I", "Adar II"
-            ]
+            # Month numbering: Tishrei=1, Marcheshvan=2, ..., Adar=6, Adar_I=7, Adar_II=8, Nisan=9, ..., Elul=14
+            month_names = {
+                1: "Tishrei", 2: "Cheshvan", 3: "Kislev", 4: "Tevet", 5: "Shevat", 6: "Adar",
+                7: "Adar I", 8: "Adar II",
+                9: "Nisan", 10: "Iyar", 11: "Sivan", 12: "Tammuz", 13: "Av", 14: "Elul"
+            }
             
-            day = hdate_obj.hdate.day
-            month_idx = hdate_obj.hdate.month - 1
-            year = hdate_obj.hdate.year
+            day = hdate_obj.day
+            month_value = hdate_obj.month.value
+            year = hdate_obj.year
             
-            if month_idx < len(month_names):
-                month_name = month_names[month_idx]
-            else:
-                month_name = str(hdate_obj.hdate.month)
+            month_name = month_names.get(month_value, str(month_value))
             
             return f"{day} {month_name} {year}"
         except (AttributeError, IndexError):
@@ -382,8 +401,10 @@ class anniversaries(Entity):
         if not self._unknown_year:
             res[ATTR_YEARS_NEXT] = self._years_next
             res[ATTR_YEARS_CURRENT] = self._years_current
-        res[ATTR_DATE] = self._date
-        res[ATTR_NEXT_DATE] = self._next_date
+        
+        # Convert datetime objects to ISO format strings for proper display
+        res[ATTR_DATE] = self._date.isoformat() if isinstance(self._date, datetime) else self._date
+        res[ATTR_NEXT_DATE] = self._next_date.isoformat() if isinstance(self._next_date, datetime) else self._next_date
         res[ATTR_WEEKS] = self._weeks_remaining
         res[ATTR_CALENDAR_TYPE] = self._calendar_type
         
@@ -395,7 +416,7 @@ class anniversaries(Entity):
                 res[ATTR_HEBREW_NEXT_DATE] = self._next_hebrew_date
         
         if self._show_half_anniversary:
-            res[ATTR_HALF_DATE] = self._half_date
+            res[ATTR_HALF_DATE] = self._half_date.isoformat() if isinstance(self._half_date, datetime) else self._half_date
             res[ATTR_HALF_DAYS] = self._half_days_remaining
         return res
 
@@ -438,7 +459,7 @@ class anniversaries(Entity):
                 nextDate, next_hdate = result
                 # Calculate years if original year is known
                 if self._hebrew_date_obj["year"]:
-                    years = next_hdate.hdate.year - self._hebrew_date_obj["year"]
+                    years = next_hdate.year - self._hebrew_date_obj["year"]
                 else:
                     years = 0
                     self._unknown_year = True

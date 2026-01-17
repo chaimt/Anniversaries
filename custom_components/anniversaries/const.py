@@ -80,7 +80,7 @@ def check_date(value):
 def validate_hebrew_date(value):
     """Validate Hebrew date format and return it if valid."""
     try:
-        import hdate
+        from hdate import HebrewDate
     except ImportError:
         raise vol.Invalid("hdate library not available for Hebrew calendar support")
     
@@ -91,8 +91,8 @@ def validate_hebrew_date(value):
             day = int(parts[0])
             month = int(parts[1])
             year = int(parts[2])
-            # Validate by creating HDate object
-            hdate.HDate(day, month, year)
+            # Validate by creating HebrewDate object
+            HebrewDate(year=year, month=month, day=day)
             return value
     except (ValueError, AttributeError):
         pass
@@ -103,8 +103,8 @@ def validate_hebrew_date(value):
         if len(parts) == 2:
             day = int(parts[0])
             month = int(parts[1])
-            # Validate month is in valid range (1-13 for leap years)
-            if 1 <= month <= 13 and 1 <= day <= 30:
+            # Validate month is in valid range (1-14 for hdate library)
+            if 1 <= month <= 14 and 1 <= day <= 30:
                 return value
     except (ValueError, AttributeError):
         pass
@@ -117,28 +117,31 @@ def validate_hebrew_date(value):
             month_name = parts[1]
             year = int(parts[2]) if len(parts) == 3 else None
             
-            # Map month names to numbers (supporting both Hebrew and English transliterations)
+            # Map month names to numbers (case-insensitive, supporting both Hebrew and English transliterations)
+            # Using hdate library month numbering: Tishrei=1, ..., Adar=6, Adar_I=7, Adar_II=8, Nisan=9, ..., Elul=14
             month_map = {
-                "Tishrei": 1, "תשרי": 1,
-                "Cheshvan": 2, "Marcheshvan": 2, "חשוון": 2, "מרחשוון": 2,
-                "Kislev": 3, "כסלו": 3,
-                "Tevet": 4, "טבת": 4,
-                "Shevat": 5, "שבט": 5,
-                "Adar": 6, "אדר": 6,
-                "Adar1": 13, "Adar I": 13, "אדר א": 13,
-                "Adar2": 14, "Adar II": 14, "אדר ב": 14,
-                "Nisan": 7, "ניסן": 7,
-                "Iyar": 8, "אייר": 8,
-                "Sivan": 9, "סיוון": 9,
-                "Tammuz": 10, "תמוז": 10,
-                "Av": 11, "אב": 11,
-                "Elul": 12, "אלול": 12,
+                "tishrei": 1, "תשרי": 1,
+                "cheshvan": 2, "marcheshvan": 2, "חשוון": 2, "מרחשוון": 2,
+                "kislev": 3, "כסלו": 3,
+                "tevet": 4, "טבת": 4,
+                "shevat": 5, "shvat": 5, "שבט": 5,
+                "adar": 6, "אדר": 6,
+                "adar1": 7, "adar_i": 7, "adar i": 7, "אדר א": 7,
+                "adar2": 8, "adar_ii": 8, "adar ii": 8, "אדר ב": 8,
+                "nisan": 9, "ניסן": 9,
+                "iyar": 10, "אייר": 10,
+                "sivan": 11, "סיוון": 11,
+                "tammuz": 12, "תמוז": 12,
+                "av": 13, "אב": 13,
+                "elul": 14, "אלול": 14,
             }
             
-            month_num = month_map.get(month_name)
+            # Convert month name to lowercase for case-insensitive matching
+            month_name_lower = month_name.lower()
+            month_num = month_map.get(month_name_lower)
             if month_num and year:
-                # Validate by creating HDate object
-                hdate.HDate(day, month_num, year)
+                # Validate by creating HebrewDate object
+                HebrewDate(year=year, month=month_num, day=day)
                 return value
             elif month_num and not year:
                 # Valid month and day without year

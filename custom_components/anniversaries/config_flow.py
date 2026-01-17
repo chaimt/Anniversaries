@@ -146,7 +146,7 @@ def is_not_date(date, one_time, calendar_type=CALENDAR_TYPE_GREGORIAN):
     if calendar_type == CALENDAR_TYPE_HEBREW:
         # Hebrew date validation
         try:
-            import hdate
+            from hdate import HebrewDate
         except ImportError:
             return True  # Can't validate Hebrew dates without hdate library
         
@@ -160,19 +160,19 @@ def is_not_date(date, one_time, calendar_type=CALENDAR_TYPE_GREGORIAN):
                 day = int(parts[0])
                 month = int(parts[1])
                 year = int(parts[2])
-                # Validate using hdate
-                hdate.HDate(day, month, year)
+                # Validate using HebrewDate
+                HebrewDate(year=year, month=month, day=day)
                 return False
             # Try format: DD-MM (no year for recurring dates)
             elif len(parts) == 2:
                 day = int(parts[0])
                 month = int(parts[1])
-                # Basic validation: Hebrew months 1-13, days 1-30
-                if 1 <= month <= 13 and 1 <= day <= 30:
+                # Basic validation: Hebrew months 1-14, days 1-30
+                if 1 <= month <= 14 and 1 <= day <= 30:
                     # For more thorough validation, try creating a date with a sample year
                     # Use a leap year to allow all month values
                     try:
-                        hdate.HDate(day, month, 5784)  # 5784 is a leap year
+                        HebrewDate(year=5784, month=month, day=day)
                         return False
                     except (ValueError, AttributeError):
                         return True
@@ -188,13 +188,14 @@ def is_not_date(date, one_time, calendar_type=CALENDAR_TYPE_GREGORIAN):
                 month_name = parts[1]
                 
                 # Map Hebrew month names to numbers
+                # Using hdate library month numbering: Tishrei=1, ..., Adar=6, Adar_I=7, Adar_II=8, Nisan=9, ..., Elul=14
                 month_map = {
                     'tishrei': 1, 'cheshvan': 2, 'marcheshvan': 2, 'kislev': 3, 'tevet': 4,
                     'shevat': 5, 'shvat': 5, 'adar': 6,
-                    'adar1': 13, 'adar_i': 13, 'adar i': 13,
-                    'adar2': 14, 'adar_ii': 14, 'adar ii': 14,
-                    'nisan': 7, 'iyar': 8, 'sivan': 9, 'tammuz': 10,
-                    'av': 11, 'elul': 12
+                    'adar1': 7, 'adar_i': 7, 'adar i': 7,
+                    'adar2': 8, 'adar_ii': 8, 'adar ii': 8,
+                    'nisan': 9, 'iyar': 10, 'sivan': 11, 'tammuz': 12,
+                    'av': 13, 'elul': 14
                 }
                 
                 month_name_lower = month_name.lower()
@@ -204,12 +205,12 @@ def is_not_date(date, one_time, calendar_type=CALENDAR_TYPE_GREGORIAN):
                     if len(parts) == 3:
                         # With year
                         year = int(parts[2])
-                        hdate.HDate(day, month, year)
+                        HebrewDate(year=year, month=month, day=day)
                         return False
                     else:
                         # Without year - validate with sample leap year
                         try:
-                            hdate.HDate(day, month, 5784)
+                            HebrewDate(year=5784, month=month, day=day)
                             return False
                         except (ValueError, AttributeError):
                             return True
