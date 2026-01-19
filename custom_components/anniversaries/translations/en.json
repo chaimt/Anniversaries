@@ -6,6 +6,7 @@
                 "data": {
                     "name": "Friendly name",
                     "calendar_type": "Calendar Type",
+                    "event_type": "Event Type",
                     "date": "Date (Gregorian: yyyy-mm-dd or mm-dd; Hebrew: dd-mm-yyyy, dd-mm, or 'DD MonthName YYYY')",
                     "count_up": "Count Up (Count down is default)",
                     "one_time": "One Time Event (Non-recurring)",
@@ -34,6 +35,14 @@
                 "gregorian": "Gregorian",
                 "hebrew": "Hebrew"
             }
+        },
+        "event_type": {
+            "options": {
+                "birthday": "Birthday",
+                "anniversary": "Anniversary",
+                "yahrzeit": "Yahrzeit",
+                "bar_bat_mitzvah": "Bar/Bat Mitzvah"
+            }
         }
     },
     "options": {
@@ -43,6 +52,7 @@
                 "data": {
                     "name": "Friendly name",
                     "calendar_type": "Calendar Type",
+                    "event_type": "Event Type",
                     "date": "Date (Gregorian: yyyy-mm-dd or mm-dd; Hebrew: dd-mm-yyyy, dd-mm, or 'DD MonthName YYYY')",
                     "count_up": "Count Up (Count down is default)",
                     "one_time": "One Time Event (Non-recurring)",

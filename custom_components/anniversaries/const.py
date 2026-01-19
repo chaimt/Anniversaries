@@ -42,12 +42,19 @@ CONF_ID_PREFIX = "id_prefix"
 CONF_ONE_TIME = "one_time"
 CONF_COUNT_UP = "count_up"
 CONF_CALENDAR_TYPE = "calendar_type"
+CONF_EVENT_TYPE = "event_type"
 CONF_DATE_EXCLUSION_ERROR = "Configuration cannot include both `date` and `date_template`. configure ONLY ONE"
 CONF_DATE_REQD_ERROR = "Either `date` or `date_template` is Required"
 
 # Calendar Types
 CALENDAR_TYPE_GREGORIAN = "gregorian"
 CALENDAR_TYPE_HEBREW = "hebrew"
+
+# Event Types
+EVENT_TYPE_BIRTHDAY = "birthday"
+EVENT_TYPE_ANNIVERSARY = "anniversary"
+EVENT_TYPE_YAHRZEIT = "yahrzeit"
+EVENT_TYPE_BAR_BAT_MITZVAH = "bar_bat_mitzvah"
 
 # Defaults
 DEFAULT_NAME = DOMAIN
@@ -62,6 +69,7 @@ DEFAULT_ID_PREFIX = "anniversary_"
 DEFAULT_ONE_TIME = False
 DEFAULT_COUNT_UP = False
 DEFAULT_CALENDAR_TYPE = CALENDAR_TYPE_GREGORIAN
+DEFAULT_EVENT_TYPE = EVENT_TYPE_BIRTHDAY
 
 ICON = DEFAULT_ICON_NORMAL
 
@@ -169,6 +177,7 @@ SENSOR_CONFIG_SCHEMA = vol.All(
             vol.Exclusive(CONF_DATE, CONF_DATE, msg=CONF_DATE_EXCLUSION_ERROR): cv.string,
             vol.Exclusive(CONF_DATE_TEMPLATE, CONF_DATE, msg=CONF_DATE_EXCLUSION_ERROR): cv.string,
             vol.Optional(CONF_CALENDAR_TYPE, default=DEFAULT_CALENDAR_TYPE): vol.In([CALENDAR_TYPE_GREGORIAN, CALENDAR_TYPE_HEBREW]),
+            vol.Optional(CONF_EVENT_TYPE, default=DEFAULT_EVENT_TYPE): vol.In([EVENT_TYPE_BIRTHDAY, EVENT_TYPE_ANNIVERSARY, EVENT_TYPE_YAHRZEIT, EVENT_TYPE_BAR_BAT_MITZVAH]),
             vol.Optional(CONF_SOON, default=DEFAULT_SOON): cv.positive_int,
             vol.Optional(CONF_ICON_NORMAL, default=DEFAULT_ICON_NORMAL): cv.icon,
             vol.Optional(CONF_ICON_TODAY, default=DEFAULT_ICON_TODAY): cv.icon,

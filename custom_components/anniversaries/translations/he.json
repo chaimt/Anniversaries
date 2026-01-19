@@ -8,6 +8,7 @@
                 "data": {
                     "name": "שם ידידותי",
                     "calendar_type": "סוג לוח שנה",
+                    "event_type": "סוג אירוע",
                     "date": "תאריך (לועזי: yyyy-mm-dd או mm-dd; עברי: dd-mm-yyyy, dd-mm, או 'DD שם חודש YYYY')",
                     "count_up": "ספור למעלה",
                     "one_time": "אירוע חד-פעמי",
@@ -37,6 +38,14 @@
                 "gregorian": "לוח לועזי",
                 "hebrew": "לוח עברי"
             }
+        },
+        "event_type": {
+            "options": {
+                "birthday": "יום הולדת",
+                "anniversary": "יום נישואין",
+                "yahrzeit": "יארצייט",
+                "bar_bat_mitzvah": "בר/בת מצווה"
+            }
         }
     },
     "options": {
@@ -47,6 +56,7 @@
                 "data": {
                     "name": "שם ידידותי",
                     "calendar_type": "סוג לוח שנה",
+                    "event_type": "סוג אירוע",
                     "date": "תאריך (לועזי: yyyy-mm-dd או mm-dd; עברי: dd-mm-yyyy, dd-mm, או 'DD שם חודש YYYY')",
                     "count_up": "ספור למעלה",
                     "one_time": "אירוע חד-פעמי",

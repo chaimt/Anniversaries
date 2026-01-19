@@ -19,6 +19,7 @@ from .const import (
     DEFAULT_ONE_TIME,
     DEFAULT_COUNT_UP,
     DEFAULT_CALENDAR_TYPE,
+    DEFAULT_EVENT_TYPE,
     CONF_ICON_NORMAL,
     CONF_ICON_TODAY,
     CONF_ICON_SOON,
@@ -30,8 +31,13 @@ from .const import (
     CONF_ONE_TIME,
     CONF_COUNT_UP,
     CONF_CALENDAR_TYPE,
+    CONF_EVENT_TYPE,
     CALENDAR_TYPE_GREGORIAN,
     CALENDAR_TYPE_HEBREW,
+    EVENT_TYPE_BIRTHDAY,
+    EVENT_TYPE_ANNIVERSARY,
+    EVENT_TYPE_YAHRZEIT,
+    EVENT_TYPE_BAR_BAT_MITZVAH,
 )
 
 from homeassistant.const import CONF_NAME
@@ -74,6 +80,7 @@ class AnniversariesFlowHandler(config_entries.ConfigFlow):
         unit_of_measurement = DEFAULT_UNIT_OF_MEASUREMENT
         id_prefix = DEFAULT_ID_PREFIX
         calendar_type = DEFAULT_CALENDAR_TYPE
+        event_type = DEFAULT_EVENT_TYPE
         if user_input is not None:
             if CONF_NAME in user_input:
                 name = user_input[CONF_NAME]
@@ -91,9 +98,12 @@ class AnniversariesFlowHandler(config_entries.ConfigFlow):
                 id_prefix = user_input[CONF_ID_PREFIX]
             if CONF_CALENDAR_TYPE in user_input:
                 calendar_type = user_input[CONF_CALENDAR_TYPE]
+            if CONF_EVENT_TYPE in user_input:
+                event_type = user_input[CONF_EVENT_TYPE]
         data_schema = OrderedDict()
         data_schema[vol.Required(CONF_NAME, default=name)] = str
         data_schema[vol.Required(CONF_CALENDAR_TYPE, default=calendar_type)] = vol.In([CALENDAR_TYPE_GREGORIAN, CALENDAR_TYPE_HEBREW])
+        data_schema[vol.Required(CONF_EVENT_TYPE, default=event_type)] = vol.In([EVENT_TYPE_BIRTHDAY, EVENT_TYPE_ANNIVERSARY, EVENT_TYPE_YAHRZEIT, EVENT_TYPE_BAR_BAT_MITZVAH])
         data_schema[vol.Required(CONF_DATE, default=date)] = str
         data_schema[vol.Required(CONF_COUNT_UP, default=count_up)] = bool
         data_schema[vol.Required(CONF_ONE_TIME, default=one_time)] = bool
@@ -267,6 +277,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         unit_of_measurement = self._config_entry.options.get(CONF_UNIT_OF_MEASUREMENT)
         half_anniversary = self._config_entry.options.get(CONF_HALF_ANNIVERSARY)
         calendar_type = self._config_entry.options.get(CONF_CALENDAR_TYPE)
+        event_type = self._config_entry.options.get(CONF_EVENT_TYPE)
         if count_up is None:
             count_up = DEFAULT_COUNT_UP
         if one_time is None:
@@ -277,8 +288,11 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
             unit_of_measurement = DEFAULT_UNIT_OF_MEASUREMENT
         if calendar_type is None:
             calendar_type = DEFAULT_CALENDAR_TYPE
+        if event_type is None:
+            event_type = DEFAULT_EVENT_TYPE
         data_schema[vol.Required(CONF_NAME,default=self._config_entry.options.get(CONF_NAME),)] = str
         data_schema[vol.Required(CONF_CALENDAR_TYPE, default=calendar_type,)] = vol.In([CALENDAR_TYPE_GREGORIAN, CALENDAR_TYPE_HEBREW])
+        data_schema[vol.Required(CONF_EVENT_TYPE, default=event_type,)] = vol.In([EVENT_TYPE_BIRTHDAY, EVENT_TYPE_ANNIVERSARY, EVENT_TYPE_YAHRZEIT, EVENT_TYPE_BAR_BAT_MITZVAH])
         data_schema[vol.Required(CONF_DATE, default=self._config_entry.options.get(CONF_DATE),)] = str
         data_schema[vol.Required(CONF_COUNT_UP, default=count_up,)] = bool
         data_schema[vol.Required(CONF_ONE_TIME, default=one_time,)] = bool
