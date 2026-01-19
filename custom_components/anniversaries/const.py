@@ -61,6 +61,30 @@ DEFAULT_NAME = DOMAIN
 DEFAULT_ICON_NORMAL = "mdi:calendar-blank"
 DEFAULT_ICON_TODAY = "mdi:calendar-star"
 DEFAULT_ICON_SOON = "mdi:calendar"
+
+# Event type specific icons
+EVENT_TYPE_ICONS = {
+    EVENT_TYPE_BIRTHDAY: {
+        "normal": "mdi:cake",
+        "today": "mdi:party-popper",
+        "soon": "mdi:cake-variant",
+    },
+    EVENT_TYPE_ANNIVERSARY: {
+        "normal": "mdi:heart",
+        "today": "mdi:heart-multiple",
+        "soon": "mdi:calendar-heart",
+    },
+    EVENT_TYPE_YAHRZEIT: {
+        "normal": "mdi:candle",
+        "today": "mdi:candle",
+        "soon": "mdi:candle",
+    },
+    EVENT_TYPE_BAR_BAT_MITZVAH: {
+        "normal": "mdi:star-of-david",
+        "today": "mdi:party-popper",
+        "soon": "mdi:star-of-david",
+    },
+}
 DEFAULT_DATE_FORMAT = "%Y-%m-%d" # Deprecated
 DEFAULT_SOON = 1
 DEFAULT_HALF_ANNIVERSARY = False

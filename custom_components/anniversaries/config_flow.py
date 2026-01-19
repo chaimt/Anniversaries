@@ -38,6 +38,7 @@ from .const import (
     EVENT_TYPE_ANNIVERSARY,
     EVENT_TYPE_YAHRZEIT,
     EVENT_TYPE_BAR_BAT_MITZVAH,
+    EVENT_TYPE_ICONS,
 )
 
 from homeassistant.const import CONF_NAME
@@ -113,10 +114,14 @@ class AnniversariesFlowHandler(config_entries.ConfigFlow):
         return self.async_show_form(step_id="user", data_schema=vol.Schema(data_schema), errors=self._errors)
 
     async def _show_icon_form(self, user_input):
-        icon_normal = DEFAULT_ICON_NORMAL
-        icon_today = DEFAULT_ICON_TODAY
+        # Get event type-specific icons
+        event_type = self._data.get(CONF_EVENT_TYPE, DEFAULT_EVENT_TYPE)
+        event_icons = EVENT_TYPE_ICONS.get(event_type, EVENT_TYPE_ICONS[DEFAULT_EVENT_TYPE])
+        
+        icon_normal = event_icons["normal"]
+        icon_today = event_icons["today"]
         days_as_soon = DEFAULT_SOON
-        icon_soon = DEFAULT_ICON_SOON
+        icon_soon = event_icons["soon"]
         if user_input is not None:
             if CONF_ICON_NORMAL in user_input:
                 icon_normal = user_input[CONF_ICON_NORMAL]
@@ -303,11 +308,21 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         )
 
     async def _show_icon_form(self, user_input):
+        # Get event type from the data collected in init step (may have been updated)
+        event_type = self._data.get(CONF_EVENT_TYPE, self._config_entry.options.get(CONF_EVENT_TYPE, DEFAULT_EVENT_TYPE))
+        event_icons = EVENT_TYPE_ICONS.get(event_type, EVENT_TYPE_ICONS[DEFAULT_EVENT_TYPE])
+        
+        # Use existing values if set, otherwise use event type-specific defaults
+        icon_normal = self._config_entry.options.get(CONF_ICON_NORMAL) or event_icons["normal"]
+        icon_today = self._config_entry.options.get(CONF_ICON_TODAY) or event_icons["today"]
+        icon_soon = self._config_entry.options.get(CONF_ICON_SOON) or event_icons["soon"]
+        days_as_soon = self._config_entry.options.get(CONF_SOON) or DEFAULT_SOON
+        
         data_schema = OrderedDict()
-        data_schema[vol.Required(CONF_ICON_NORMAL,default=self._config_entry.options.get(CONF_ICON_NORMAL),)] = str
-        data_schema[vol.Required(CONF_ICON_TODAY,default=self._config_entry.options.get(CONF_ICON_TODAY),)] = str
-        data_schema[vol.Required(CONF_SOON,default=self._config_entry.options.get(CONF_SOON),)] = int
-        data_schema[vol.Required(CONF_ICON_SOON,default=self._config_entry.options.get(CONF_ICON_SOON),)] = str
+        data_schema[vol.Required(CONF_ICON_NORMAL, default=icon_normal,)] = str
+        data_schema[vol.Required(CONF_ICON_TODAY, default=icon_today,)] = str
+        data_schema[vol.Required(CONF_SOON, default=days_as_soon,)] = int
+        data_schema[vol.Required(CONF_ICON_SOON, default=icon_soon,)] = str
         return self.async_show_form(step_id="icons", data_schema=vol.Schema(data_schema), errors=self._errors)
 
 
