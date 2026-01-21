@@ -3,6 +3,11 @@ from collections import OrderedDict
 from homeassistant.core import callback
 import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.helpers.selector import (
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 from datetime import datetime
 import uuid
 
@@ -34,10 +39,8 @@ from .const import (
     CONF_EVENT_TYPE,
     CALENDAR_TYPE_GREGORIAN,
     CALENDAR_TYPE_HEBREW,
-    EVENT_TYPE_BIRTHDAY,
-    EVENT_TYPE_ANNIVERSARY,
-    EVENT_TYPE_YAHRZEIT,
-    EVENT_TYPE_BAR_BAT_MITZVAH,
+    CALENDAR_TYPE_OPTIONS,
+    EVENT_TYPE_OPTIONS,
     EVENT_TYPE_ICONS,
 )
 
@@ -103,8 +106,20 @@ class AnniversariesFlowHandler(config_entries.ConfigFlow):
                 event_type = user_input[CONF_EVENT_TYPE]
         data_schema = OrderedDict()
         data_schema[vol.Required(CONF_NAME, default=name)] = str
-        data_schema[vol.Required(CONF_CALENDAR_TYPE, default=calendar_type)] = vol.In([CALENDAR_TYPE_GREGORIAN, CALENDAR_TYPE_HEBREW])
-        data_schema[vol.Required(CONF_EVENT_TYPE, default=event_type)] = vol.In([EVENT_TYPE_BIRTHDAY, EVENT_TYPE_ANNIVERSARY, EVENT_TYPE_YAHRZEIT, EVENT_TYPE_BAR_BAT_MITZVAH])
+        data_schema[vol.Required(CONF_CALENDAR_TYPE, default=calendar_type)] = SelectSelector(
+            SelectSelectorConfig(
+                options=CALENDAR_TYPE_OPTIONS,
+                mode=SelectSelectorMode.DROPDOWN,
+                translation_key="calendar_type",
+            )
+        )
+        data_schema[vol.Required(CONF_EVENT_TYPE, default=event_type)] = SelectSelector(
+            SelectSelectorConfig(
+                options=EVENT_TYPE_OPTIONS,
+                mode=SelectSelectorMode.DROPDOWN,
+                translation_key="event_type",
+            )
+        )
         data_schema[vol.Required(CONF_DATE, default=date)] = str
         data_schema[vol.Required(CONF_COUNT_UP, default=count_up)] = bool
         data_schema[vol.Required(CONF_ONE_TIME, default=one_time)] = bool
@@ -304,8 +319,20 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         if event_type is None:
             event_type = DEFAULT_EVENT_TYPE
         data_schema[vol.Required(CONF_NAME,default=self._config_entry.options.get(CONF_NAME),)] = str
-        data_schema[vol.Required(CONF_CALENDAR_TYPE, default=calendar_type,)] = vol.In([CALENDAR_TYPE_GREGORIAN, CALENDAR_TYPE_HEBREW])
-        data_schema[vol.Required(CONF_EVENT_TYPE, default=event_type,)] = vol.In([EVENT_TYPE_BIRTHDAY, EVENT_TYPE_ANNIVERSARY, EVENT_TYPE_YAHRZEIT, EVENT_TYPE_BAR_BAT_MITZVAH])
+        data_schema[vol.Required(CONF_CALENDAR_TYPE, default=calendar_type,)] = SelectSelector(
+            SelectSelectorConfig(
+                options=CALENDAR_TYPE_OPTIONS,
+                mode=SelectSelectorMode.DROPDOWN,
+                translation_key="calendar_type",
+            )
+        )
+        data_schema[vol.Required(CONF_EVENT_TYPE, default=event_type,)] = SelectSelector(
+            SelectSelectorConfig(
+                options=EVENT_TYPE_OPTIONS,
+                mode=SelectSelectorMode.DROPDOWN,
+                translation_key="event_type",
+            )
+        )
         data_schema[vol.Required(CONF_DATE, default=self._config_entry.options.get(CONF_DATE),)] = str
         data_schema[vol.Required(CONF_COUNT_UP, default=count_up,)] = bool
         data_schema[vol.Required(CONF_ONE_TIME, default=one_time,)] = bool

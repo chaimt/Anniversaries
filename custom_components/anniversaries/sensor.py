@@ -39,9 +39,11 @@ from .const import (
     CONF_ONE_TIME,
     CONF_COUNT_UP,
     CONF_CALENDAR_TYPE,
+    CONF_EVENT_TYPE,
     CALENDAR_TYPE_GREGORIAN,
     CALENDAR_TYPE_HEBREW,
     DEFAULT_CALENDAR_TYPE,
+    DEFAULT_EVENT_TYPE,
     DOMAIN,
     SENSOR_PLATFORM,
     CALENDAR_PLATFORM,
@@ -58,6 +60,7 @@ ATTR_HALF_DAYS = "days_until_half_anniversary"
 ATTR_HEBREW_DATE = "hebrew_date"
 ATTR_HEBREW_NEXT_DATE = "hebrew_next_date"
 ATTR_CALENDAR_TYPE = "calendar_type"
+ATTR_EVENT_TYPE = "event_type"
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """Setup the sensor platform."""
@@ -229,6 +232,7 @@ class anniversaries(Entity):
             self._unit_of_measurement = DEFAULT_UNIT_OF_MEASUREMENT
         self._one_time = config.get(CONF_ONE_TIME)
         self._count_up = config.get(CONF_COUNT_UP)
+        self._event_type = config.get(CONF_EVENT_TYPE, DEFAULT_EVENT_TYPE)
 
     def _parse_hebrew_date(self, date_str):
         """Parse Hebrew date string and store components."""
@@ -426,6 +430,7 @@ class anniversaries(Entity):
         res[ATTR_NEXT_DATE] = self._next_date.isoformat() if isinstance(self._next_date, datetime) else self._next_date
         res[ATTR_WEEKS] = self._weeks_remaining
         res[ATTR_CALENDAR_TYPE] = self._calendar_type
+        res[ATTR_EVENT_TYPE] = self._event_type
         
         # Add Hebrew calendar attributes if applicable
         if self._calendar_type == CALENDAR_TYPE_HEBREW:

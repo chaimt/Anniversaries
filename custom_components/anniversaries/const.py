@@ -9,7 +9,7 @@ from homeassistant.const import CONF_NAME
 # Base component constants
 DOMAIN = "anniversaries"
 DOMAIN_DATA = f"{DOMAIN}_data"
-VERSION = "6.0.1f"
+VERSION = "6.0.1g"
 PLATFORM = "sensor"
 ISSUE_URL = "https://github.com/pinkywafer/Anniversaries/issues"
 ATTRIBUTION = "Sensor data calculated by Anniversaries Integration"
@@ -55,6 +55,20 @@ EVENT_TYPE_BIRTHDAY = "birthday"
 EVENT_TYPE_ANNIVERSARY = "anniversary"
 EVENT_TYPE_YAHRZEIT = "yahrzeit"
 EVENT_TYPE_BAR_BAT_MITZVAH = "bar_bat_mitzvah"
+
+# Event Type Options (for selectors)
+EVENT_TYPE_OPTIONS = [
+    EVENT_TYPE_BIRTHDAY,
+    EVENT_TYPE_ANNIVERSARY,
+    EVENT_TYPE_YAHRZEIT,
+    EVENT_TYPE_BAR_BAT_MITZVAH,
+]
+
+# Calendar Type Options (for selectors)
+CALENDAR_TYPE_OPTIONS = [
+    CALENDAR_TYPE_GREGORIAN,
+    CALENDAR_TYPE_HEBREW,
+]
 
 # Defaults
 DEFAULT_NAME = DOMAIN
@@ -208,8 +222,8 @@ SENSOR_CONFIG_SCHEMA = vol.All(
             vol.Required(CONF_NAME): cv.string,
             vol.Exclusive(CONF_DATE, CONF_DATE, msg=CONF_DATE_EXCLUSION_ERROR): cv.string,
             vol.Exclusive(CONF_DATE_TEMPLATE, CONF_DATE, msg=CONF_DATE_EXCLUSION_ERROR): cv.string,
-            vol.Optional(CONF_CALENDAR_TYPE, default=DEFAULT_CALENDAR_TYPE): vol.In([CALENDAR_TYPE_GREGORIAN, CALENDAR_TYPE_HEBREW]),
-            vol.Optional(CONF_EVENT_TYPE, default=DEFAULT_EVENT_TYPE): vol.In([EVENT_TYPE_BIRTHDAY, EVENT_TYPE_ANNIVERSARY, EVENT_TYPE_YAHRZEIT, EVENT_TYPE_BAR_BAT_MITZVAH]),
+            vol.Optional(CONF_CALENDAR_TYPE, default=DEFAULT_CALENDAR_TYPE): vol.In(CALENDAR_TYPE_OPTIONS),
+            vol.Optional(CONF_EVENT_TYPE, default=DEFAULT_EVENT_TYPE): vol.In(EVENT_TYPE_OPTIONS),
             vol.Optional(CONF_SOON, default=DEFAULT_SOON): cv.positive_int,
             vol.Optional(CONF_ICON_NORMAL, default=DEFAULT_ICON_NORMAL): cv.icon,
             vol.Optional(CONF_ICON_TODAY, default=DEFAULT_ICON_TODAY): cv.icon,
