@@ -44,7 +44,8 @@ from .const import (
 from homeassistant.const import CONF_NAME
 
 
-class AnniversariesFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
+@config_entries.HANDLERS.register(DOMAIN)
+class AnniversariesFlowHandler(config_entries.ConfigFlow):
     CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_POLL
 
     def __init__(self):
