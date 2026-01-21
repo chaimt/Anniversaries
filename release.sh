@@ -16,7 +16,6 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 COMPONENT_DIR="$SCRIPT_DIR/custom_components/anniversaries"
 CONST_FILE="$COMPONENT_DIR/const.py"
-MANIFEST_FILE="$COMPONENT_DIR/manifest.json"
 OUTPUT_DIR="$SCRIPT_DIR/dist"
 
 # Get current version from const.py
@@ -39,22 +38,6 @@ update_const_version() {
     sed -i.bak "s/VERSION = \".*\"/VERSION = \"$version\"/" "$CONST_FILE"
     rm -f "$CONST_FILE.bak"
     echo -e "${GREEN}Updated const.py version to $version${NC}"
-}
-
-# Update version in manifest.json
-update_manifest_version() {
-    local version=$1
-    # Use Python for reliable JSON manipulation
-    python3 -c "
-import json
-with open('$MANIFEST_FILE', 'r') as f:
-    data = json.load(f)
-data['version'] = '$version'
-with open('$MANIFEST_FILE', 'w') as f:
-    json.dump(data, f, indent=2)
-    f.write('\n')
-"
-    echo -e "${GREEN}Updated manifest.json version to $version${NC}"
 }
 
 # Create the release zip file
@@ -183,7 +166,6 @@ main() {
     if [[ $new_version != $current_version ]]; then
         echo "Updating version numbers..."
         update_const_version "$new_version"
-        update_manifest_version "$new_version"
         echo ""
     fi
     
