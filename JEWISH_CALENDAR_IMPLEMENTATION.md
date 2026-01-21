@@ -20,9 +20,11 @@ Users can now input Hebrew dates in multiple formats:
 Supported month names (English and Hebrew):
 - Tishrei (תשרי), Cheshvan/Marcheshvan (חשוון/מרחשוון)
 - Kislev (כסלו), Tevet (טבת), Shevat (שבט)
-- Adar (אדר), Adar I (אדר א), Adar II (אדר ב)
+- Adar (אדר), Adar I / Adar_I (אדר א), Adar II / Adar_II (אדר ב)
 - Nisan (ניסן), Iyar (אייר), Sivan (סיוון)
 - Tammuz (תמוז), Av (אב), Elul (אלול)
+
+**Note:** For Adar I and Adar II, you can use either spaces (e.g., "15 Adar I 5765") or underscores (e.g., "15 Adar_I 5765").
 
 ### 3. Hebrew Calendar Recurrence
 Anniversaries using Hebrew calendar now recur on the same Hebrew date each year:
@@ -109,7 +111,16 @@ anniversaries:
     date: "10 Shevat 5720"
 ```
 
-### Example 3: Hebrew Date Without Year
+### Example 3: Adar I Date (Leap Year Month)
+```yaml
+anniversaries:
+  sensors:
+  - name: "Sarah's Birthday"
+    calendar_type: hebrew
+    date: "15 Adar I 5765"  # Spaces or underscores both work: "15 Adar_I 5765"
+```
+
+### Example 4: Hebrew Date Without Year (Recurring)
 ```yaml
 anniversaries:
   sensors:
@@ -119,10 +130,10 @@ anniversaries:
     one_time: false
 ```
 
-### Example 4: Config Flow (UI)
+### Example 5: Config Flow (UI)
 1. Go to Settings → Integrations → Add Integration → Anniversaries
 2. Select "Calendar Type": Hebrew
-3. Enter date in Hebrew format: "15-03-5745" or "15 Adar 5745"
+3. Enter date in Hebrew format: "15-03-5745" or "15 Adar 5745" (use "15 Adar I 5765" for Adar I)
 4. Configure other options as needed
 
 ## Testing Checklist

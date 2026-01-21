@@ -201,6 +201,15 @@ def is_not_date(date, one_time, calendar_type=CALENDAR_TYPE_GREGORIAN):
             if len(parts) >= 2:
                 day = int(parts[0])
                 month_name = parts[1]
+                year = None
+                
+                # Handle "Adar I" and "Adar II" with space (e.g., "15 Adar I 5765" or "15 Adar II")
+                if len(parts) >= 3 and parts[1].lower() == 'adar' and parts[2].lower() in ('i', 'ii', '1', '2'):
+                    month_name = parts[1] + ' ' + parts[2]  # Combine "Adar" + "I" or "II"
+                    if len(parts) == 4:
+                        year = int(parts[3])
+                elif len(parts) == 3:
+                    year = int(parts[2])
                 
                 # Map Hebrew month names to numbers
                 # Using hdate library month numbering: Tishrei=1, ..., Adar=6, Adar_I=7, Adar_II=8, Nisan=9, ..., Elul=14
@@ -217,9 +226,8 @@ def is_not_date(date, one_time, calendar_type=CALENDAR_TYPE_GREGORIAN):
                 if month_name_lower in month_map:
                     month = month_map[month_name_lower]
                     
-                    if len(parts) == 3:
+                    if year is not None:
                         # With year
-                        year = int(parts[2])
                         HebrewDate(year=year, month=month, day=day)
                         return False
                     else:

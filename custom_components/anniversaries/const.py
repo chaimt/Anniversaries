@@ -9,7 +9,7 @@ from homeassistant.const import CONF_NAME
 # Base component constants
 DOMAIN = "anniversaries"
 DOMAIN_DATA = f"{DOMAIN}_data"
-VERSION = "6.0.1e"
+VERSION = "6.0.1f"
 PLATFORM = "sensor"
 ISSUE_URL = "https://github.com/pinkywafer/Anniversaries/issues"
 ATTRIBUTION = "Sensor data calculated by Anniversaries Integration"
@@ -147,7 +147,15 @@ def validate_hebrew_date(value):
         if len(parts) >= 2:
             day = int(parts[0])
             month_name = parts[1]
-            year = int(parts[2]) if len(parts) == 3 else None
+            year = None
+            
+            # Handle "Adar I" and "Adar II" with space (e.g., "15 Adar I 5765" or "15 Adar II")
+            if len(parts) >= 3 and parts[1].lower() == 'adar' and parts[2].lower() in ('i', 'ii', '1', '2', 'א', 'ב'):
+                month_name = parts[1] + ' ' + parts[2]  # Combine "Adar" + "I" or "II"
+                if len(parts) == 4:
+                    year = int(parts[3])
+            elif len(parts) == 3:
+                year = int(parts[2])
             
             # Map month names to numbers (case-insensitive, supporting both Hebrew and English transliterations)
             # Using hdate library month numbering: Tishrei=1, ..., Adar=6, Adar_I=7, Adar_II=8, Nisan=9, ..., Elul=14
