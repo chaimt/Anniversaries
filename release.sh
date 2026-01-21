@@ -85,33 +85,70 @@ create_zip() {
     echo "  - $versioned_zip"
 }
 
-# Create git tag
-create_git_tag() {
+# Commit changes, create tag, and push
+git_operations() {
     local version=$1
     
     echo ""
-    read -p "Create git tag v$version? (y/n): " create_tag
-    if [[ $create_tag =~ ^[Yy]$ ]]; then
-        # Check for uncommitted changes
-        if [[ -n $(git status --porcelain) ]]; then
-            echo -e "${YELLOW}Warning: You have uncommitted changes.${NC}"
-            read -p "Commit changes before tagging? (y/n): " commit_changes
-            if [[ $commit_changes =~ ^[Yy]$ ]]; then
-                git add -A
-                git commit -m "Release v$version"
-                echo -e "${GREEN}Changes committed${NC}"
-            fi
-        fi
-        
+    
+    # Check for uncommitted changes
+    if [[ -n $(git status --porcelain) ]]; then
+        echo "Committing changes..."
+        git add -A
+        git commit -m "Release v$version"
+        echo -e "${GREEN}Changes committed${NC}"
+    else
+        echo "No changes to commit"
+    fi
+    
+    # Check if tag already exists
+    if git rev-parse "v$version" >/dev/null 2>&1; then
+        echo -e "${YELLOW}Tag v$version already exists, skipping tag creation${NC}"
+    else
+        echo "Creating git tag..."
         git tag -a "v$version" -m "Release v$version"
         echo -e "${GREEN}Created git tag v$version${NC}"
-        
-        read -p "Push tag to origin? (y/n): " push_tag
-        if [[ $push_tag =~ ^[Yy]$ ]]; then
-            git push origin "v$version"
-            echo -e "${GREEN}Pushed tag v$version to origin${NC}"
-        fi
     fi
+    
+    # Push commits and tag
+    echo "Pushing to origin..."
+    git push origin HEAD
+    git push origin "v$version" 2>/dev/null || echo -e "${YELLOW}Tag already exists on remote${NC}"
+    echo -e "${GREEN}Pushed to origin${NC}"
+}
+
+# Create GitHub release with zip file
+create_github_release() {
+    local version=$1
+    local zip_file="$OUTPUT_DIR/anniversaries.zip"
+    
+    echo ""
+    
+    # Check if gh CLI is available
+    if ! command -v gh &> /dev/null; then
+        echo -e "${YELLOW}GitHub CLI (gh) not found. Skipping GitHub release creation.${NC}"
+        echo "Install it with: brew install gh"
+        echo "Then manually create a release at: https://github.com/chaimt/Anniversaries/releases"
+        return
+    fi
+    
+    # Check if release already exists
+    if gh release view "v$version" &>/dev/null; then
+        echo -e "${YELLOW}GitHub release v$version already exists${NC}"
+        echo "Updating release assets..."
+        gh release upload "v$version" "$zip_file" --clobber
+        echo -e "${GREEN}Updated release assets${NC}"
+    else
+        echo "Creating GitHub release..."
+        gh release create "v$version" "$zip_file" \
+            --title "v$version" \
+            --notes "Release v$version"
+        echo -e "${GREEN}Created GitHub release v$version${NC}"
+    fi
+    
+    # Get and display release URL
+    local release_url=$(gh release view "v$version" --json url -q .url)
+    echo -e "${GREEN}Release URL: $release_url${NC}"
 }
 
 # Main script
@@ -154,19 +191,16 @@ main() {
     echo "Creating release zip..."
     create_zip "$new_version"
     
-    # Git operations
-    create_git_tag "$new_version"
+    # Git operations (commit, tag, push)
+    git_operations "$new_version"
+    
+    # Create GitHub release
+    create_github_release "$new_version"
     
     echo ""
     echo -e "${GREEN}========================================${NC}"
     echo -e "${GREEN}  Release $new_version complete!${NC}"
     echo -e "${GREEN}========================================${NC}"
-    echo ""
-    echo "Next steps:"
-    echo "  1. Review the changes: git diff"
-    echo "  2. Push to GitHub: git push origin master"
-    echo "  3. Create a GitHub release with the tag"
-    echo "  4. Upload dist/anniversaries.zip to the release"
 }
 
 main "$@"
