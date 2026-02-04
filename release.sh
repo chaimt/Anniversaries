@@ -40,6 +40,15 @@ update_const_version() {
     echo -e "${GREEN}Updated const.py version to $version${NC}"
 }
 
+# Update version in manifest.json
+update_manifest_version() {
+    local version=$1
+    local manifest_file="$COMPONENT_DIR/manifest.json"
+    sed -i.bak "s/\"version\": \"[^\"]*\"/\"version\": \"$version\"/" "$manifest_file"
+    rm -f "$manifest_file.bak"
+    echo -e "${GREEN}Updated manifest.json version to $version${NC}"
+}
+
 # Create the release zip file
 create_zip() {
     local version=$1
@@ -54,17 +63,36 @@ create_zip() {
     # Remove old zip files
     rm -f "$zip_file" "$versioned_zip"
     
+    # Verify component directory exists
+    if [[ ! -d "$COMPONENT_DIR" ]]; then
+        echo -e "${RED}Error: Component directory not found: $COMPONENT_DIR${NC}"
+        exit 1
+    fi
+    
     # Create zip from component directory
     cd "$COMPONENT_DIR"
     zip -r "$zip_file" . -x "*.pyc" -x "__pycache__/*" -x ".DS_Store" -x "*.bak"
     
+    cd "$SCRIPT_DIR"
+    
+    # Verify zip was created successfully
+    if [[ ! -f "$zip_file" ]]; then
+        echo -e "${RED}Error: Failed to create zip file: $zip_file${NC}"
+        exit 1
+    fi
+    
+    # Check zip file is not empty
+    local zip_size=$(stat -f%z "$zip_file" 2>/dev/null || stat -c%s "$zip_file" 2>/dev/null)
+    if [[ "$zip_size" -lt 1000 ]]; then
+        echo -e "${RED}Error: Zip file appears to be empty or too small: $zip_file (${zip_size} bytes)${NC}"
+        exit 1
+    fi
+    
     # Also create a versioned copy
     cp "$zip_file" "$versioned_zip"
     
-    cd "$SCRIPT_DIR"
-    
     echo -e "${GREEN}Created release zip files:${NC}"
-    echo "  - $zip_file"
+    echo "  - $zip_file ($(du -h "$zip_file" | cut -f1))"
     echo "  - $versioned_zip"
 }
 
@@ -107,26 +135,50 @@ create_github_release() {
     
     echo ""
     
+    # Verify zip file exists before attempting upload
+    if [[ ! -f "$zip_file" ]]; then
+        echo -e "${RED}Error: Zip file not found: $zip_file${NC}"
+        echo "Run the script again to create the zip file."
+        exit 1
+    fi
+    
     # Check if gh CLI is available
     if ! command -v gh &> /dev/null; then
         echo -e "${YELLOW}GitHub CLI (gh) not found. Skipping GitHub release creation.${NC}"
         echo "Install it with: brew install gh"
         echo "Then manually create a release at: https://github.com/chaimt/Anniversaries/releases"
+        echo "Don't forget to upload: $zip_file"
         return
     fi
     
     # Check if release already exists
     if gh release view "v$version" &>/dev/null; then
         echo -e "${YELLOW}GitHub release v$version already exists${NC}"
-        echo "Updating release assets..."
-        gh release upload "v$version" "$zip_file" --clobber
-        echo -e "${GREEN}Updated release assets${NC}"
+        echo "Uploading zip file to existing release..."
+        if gh release upload "v$version" "$zip_file" --clobber; then
+            echo -e "${GREEN}Successfully uploaded anniversaries.zip${NC}"
+        else
+            echo -e "${RED}Failed to upload zip file${NC}"
+            exit 1
+        fi
     else
         echo "Creating GitHub release..."
-        gh release create "v$version" "$zip_file" \
+        if gh release create "v$version" "$zip_file" \
             --title "v$version" \
-            --notes "Release v$version"
-        echo -e "${GREEN}Created GitHub release v$version${NC}"
+            --notes "Release v$version"; then
+            echo -e "${GREEN}Created GitHub release v$version with anniversaries.zip${NC}"
+        else
+            echo -e "${RED}Failed to create GitHub release${NC}"
+            exit 1
+        fi
+    fi
+    
+    # Verify the asset was uploaded
+    echo "Verifying release assets..."
+    if gh release view "v$version" --json assets -q '.assets[].name' | grep -q "anniversaries.zip"; then
+        echo -e "${GREEN}Verified: anniversaries.zip is attached to the release${NC}"
+    else
+        echo -e "${RED}Warning: anniversaries.zip may not have been uploaded correctly${NC}"
     fi
     
     # Get and display release URL
@@ -166,6 +218,7 @@ main() {
     if [[ $new_version != $current_version ]]; then
         echo "Updating version numbers..."
         update_const_version "$new_version"
+        update_manifest_version "$new_version"
         echo ""
     fi
     
