@@ -61,6 +61,7 @@ ATTR_HEBREW_DATE = "hebrew_date"
 ATTR_HEBREW_NEXT_DATE = "hebrew_next_date"
 ATTR_CALENDAR_TYPE = "calendar_type"
 ATTR_EVENT_TYPE = "event_type"
+ATTR_ICON = "icon"
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """Setup the sensor platform."""
@@ -425,22 +426,24 @@ class anniversaries(Entity):
             res[ATTR_YEARS_NEXT] = self._years_next
             res[ATTR_YEARS_CURRENT] = self._years_current
         
-        # Convert datetime objects to ISO format strings for proper display
-        res[ATTR_DATE] = self._date.isoformat() if isinstance(self._date, datetime) else self._date
-        res[ATTR_NEXT_DATE] = self._next_date.isoformat() if isinstance(self._next_date, datetime) else self._next_date
+        # Convert datetime objects to simple date format (yyyy-mm-dd)
+        res[ATTR_DATE] = self._date.strftime("%Y-%m-%d") if isinstance(self._date, datetime) else self._date
+        res[ATTR_NEXT_DATE] = self._next_date.strftime("%Y-%m-%d") if isinstance(self._next_date, datetime) else self._next_date
         res[ATTR_WEEKS] = self._weeks_remaining
         res[ATTR_CALENDAR_TYPE] = self._calendar_type
         res[ATTR_EVENT_TYPE] = self._event_type
+        res[ATTR_ICON] = self._icon
         
-        # Add Hebrew calendar attributes if applicable
+        # Add Hebrew calendar attributes - always include for consistency
         if self._calendar_type == CALENDAR_TYPE_HEBREW:
-            if self._hebrew_date:
-                res[ATTR_HEBREW_DATE] = self._hebrew_date
-            if hasattr(self, '_next_hebrew_date') and self._next_hebrew_date:
-                res[ATTR_HEBREW_NEXT_DATE] = self._next_hebrew_date
+            res[ATTR_HEBREW_DATE] = self._hebrew_date if self._hebrew_date else ""
+            res[ATTR_HEBREW_NEXT_DATE] = self._next_hebrew_date if hasattr(self, '_next_hebrew_date') and self._next_hebrew_date else ""
+        else:
+            res[ATTR_HEBREW_DATE] = ""
+            res[ATTR_HEBREW_NEXT_DATE] = ""
         
         if self._show_half_anniversary:
-            res[ATTR_HALF_DATE] = self._half_date.isoformat() if isinstance(self._half_date, datetime) else self._half_date
+            res[ATTR_HALF_DATE] = self._half_date.strftime("%Y-%m-%d") if isinstance(self._half_date, datetime) else self._half_date
             res[ATTR_HALF_DAYS] = self._half_days_remaining
         return res
 
