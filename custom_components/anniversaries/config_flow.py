@@ -344,13 +344,28 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
 
     async def _show_icon_form(self, user_input):
         # Get event type from the data collected in init step (may have been updated)
-        event_type = self._data.get(CONF_EVENT_TYPE, self._config_entry.options.get(CONF_EVENT_TYPE, DEFAULT_EVENT_TYPE))
-        event_icons = EVENT_TYPE_ICONS.get(event_type, EVENT_TYPE_ICONS[DEFAULT_EVENT_TYPE])
+        old_event_type = self._config_entry.options.get(CONF_EVENT_TYPE, DEFAULT_EVENT_TYPE)
+        new_event_type = self._data.get(CONF_EVENT_TYPE, old_event_type)
+        event_type_changed = old_event_type != new_event_type
         
-        # Use existing values if set, otherwise use event type-specific defaults
-        icon_normal = self._config_entry.options.get(CONF_ICON_NORMAL) or event_icons["normal"]
-        icon_today = self._config_entry.options.get(CONF_ICON_TODAY) or event_icons["today"]
-        icon_soon = self._config_entry.options.get(CONF_ICON_SOON) or event_icons["soon"]
+        event_icons = EVENT_TYPE_ICONS.get(new_event_type, EVENT_TYPE_ICONS[DEFAULT_EVENT_TYPE])
+        
+        # Check if existing icons are the old event type defaults (not user-customized)
+        existing_icon_normal = self._config_entry.options.get(CONF_ICON_NORMAL)
+        existing_icon_today = self._config_entry.options.get(CONF_ICON_TODAY)
+        existing_icon_soon = self._config_entry.options.get(CONF_ICON_SOON)
+        
+        # If event type changed and icons match old event type defaults, use new event type icons
+        if event_type_changed:
+            icon_normal = event_icons["normal"]
+            icon_today = event_icons["today"]
+            icon_soon = event_icons["soon"]
+        else:
+            # Use existing values if set, otherwise use event type-specific defaults
+            icon_normal = existing_icon_normal or event_icons["normal"]
+            icon_today = existing_icon_today or event_icons["today"]
+            icon_soon = existing_icon_soon or event_icons["soon"]
+        
         days_as_soon = self._config_entry.options.get(CONF_SOON) or DEFAULT_SOON
         
         data_schema = OrderedDict()

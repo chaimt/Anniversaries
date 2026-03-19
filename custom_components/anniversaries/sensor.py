@@ -44,6 +44,7 @@ from .const import (
     CALENDAR_TYPE_HEBREW,
     DEFAULT_CALENDAR_TYPE,
     DEFAULT_EVENT_TYPE,
+    EVENT_TYPE_ICONS,
     DOMAIN,
     SENSOR_PLATFORM,
     CALENDAR_PLATFORM,
@@ -219,9 +220,12 @@ class anniversaries(Entity):
                 self._date = self._date.replace(tzinfo=dt_util.DEFAULT_TIME_ZONE)
                 if self._show_half_anniversary:
                     self._half_date = self._date + relativedelta(months=+6)
-        self._icon_normal = config.get(CONF_ICON_NORMAL)
-        self._icon_today = config.get(CONF_ICON_TODAY)
-        self._icon_soon = config.get(CONF_ICON_SOON)
+        self._event_type = config.get(CONF_EVENT_TYPE, DEFAULT_EVENT_TYPE)
+        # Get event-type specific icons as defaults
+        event_icons = EVENT_TYPE_ICONS.get(self._event_type, EVENT_TYPE_ICONS[DEFAULT_EVENT_TYPE])
+        self._icon_normal = config.get(CONF_ICON_NORMAL) or event_icons["normal"]
+        self._icon_today = config.get(CONF_ICON_TODAY) or event_icons["today"]
+        self._icon_soon = config.get(CONF_ICON_SOON) or event_icons["soon"]
         self._soon = config.get(CONF_SOON)
         self._icon = self._icon_normal
         self._years_next = 0
@@ -233,7 +237,6 @@ class anniversaries(Entity):
             self._unit_of_measurement = DEFAULT_UNIT_OF_MEASUREMENT
         self._one_time = config.get(CONF_ONE_TIME)
         self._count_up = config.get(CONF_COUNT_UP)
-        self._event_type = config.get(CONF_EVENT_TYPE, DEFAULT_EVENT_TYPE)
 
     def _parse_hebrew_date(self, date_str):
         """Parse Hebrew date string and store components."""
